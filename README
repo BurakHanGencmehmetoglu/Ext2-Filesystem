@@ -1,0 +1,93 @@
+Ext2 filesystem implementation with extra utilities.
+
+
+dup - duplicating files
+
+The first utility is dup, which is very similar to cp but will duplicate file blocks instead of
+copying data to new blocks. 
+The command will be run with the following format:
+$ ./ext2sutils dup FS_IMAGE SOURCE DEST
+FS_IMAGE will be a valid ext2s filesystem image.
+SOURCE always refers to regular files and has two possible formats:
+1. inode_no: Just a valid inode number. With this format, SOURCE is the inode number of the file to
+be duplicated.
+2. /abs/path/to/filename: An absolute path to the file starting from the root directory /.
+
+DEST also has two possible formats:
+1. dir_inode/target_name: The left side of the / is a directory inode, and the right side is the name
+of the destination duplicated file.
+2. /abs/path/to/target_name: An absolute path, same properties as with SOURCE. The last compo-
+nent of the path is always the name of destination file and never just a directory. Intermediate
+directories in the path will always exist.
+
+Some examples :
+
+// dup file at inode 15 into directory inode 2 (root) with name file.txt
+>./ext2sutils dup fs.img 15 2/file.txt
+
+//dup file hw3.c under /folder/ into directory inode 14 with name code.c
+>./ext2sutils dup myext2.img /folder/hw3.c 14/code.c
+
+//dup file at inode 88 into directory /home/torag/docs/ with name recovered.bin
+>./ext2sutils dup example.img 88 /home/torag/docs/recovered.bin
+
+//dup file hr.avi under directory /y/2020 into /y/2021 with name nostalgia.avi
+>./ext2sutils dup example.img /y/2020/hr.avi /y/2021/nostalgia.avi
+
+To duplicate the file:
+1. In case there are absolute paths, determine the inode of the source file and target directory via path
+traversal. Otherwise, they’re already given.
+2. Allocate an inode for the new file.
+3. Increment reference counts for the file blocks.
+4. Insert an entry with the new inode and target name into the target directory. Most of the time you
+should be able to find space for your entry inside one of the existing allocated blocks. Sometimes
+however there won’t be enough space for your entry; in which case you have to allocate a new data
+block and add it to the directory inode.
+
+Your program should print the allocated inode number as well as the data block allocated for the directory
+if one has been allocated (-1 otherwise).
+Example output where inode 17 was allocated and the directory entry fit inside an existing block:
+17
+-1
+Another one where inode 126 was allocated and a new data block 1257 was allocated for the entry:
+126
+1257
+
+
+rm - removing files :
+
+The next utility is rm, which is pretty much the rm you’re used to, except it’s on ext2s. The
+command will be run with the following format:
+$ ./ext2sutils rm FS_IMAGE DEST
+FS_IMAGE and DEST are the same as with dup. DEST can be either a dir_inode/target_name pair or an
+/absolute/path/to/target and will again always be a regular file.
+
+To remove a file entry from a directory, you need to do the following:
+1. Find the inode of the target directory through traversal if given an absolute path. Otherwise it’s
+already given.
+2. Find the target entry in the directory data blocks. This will give you the inode of the target file.
+3. You also have to remove the directory entry you’ve found. This is simple linked list removal: the
+previous entry will have to be made to point to the next one. For the first entry case, simply set
+the inode field to 0 to indicate that the entry should be skipped. If the entry was the only one on
+the data block, you should not deallocate the data block.
+4. Time to move on to the inode. First of all, you should decrement the hard link count of the inode.
+5. Deallocate the inode from the bitmap.
+6. Then, go through the blocks of the file and decrease their reference counts. If a block’s reference
+count becomes zero after decrementing, also deallocate that block from the bitmap.
+The program should once again output two lines. The first line will contain the inode of the target file.
+The next line will contain the block numbers of all deallocated blocks (those who’ve reached a reference
+count of zero and have been deallocated from bitmaps, not all blocks).
+
+Examples:
+
+# remove file useless.bin under directory inode 17
+# the target inode turns out to be 25 and no blocks are deallocated
+$ ./ext2sutils rm fs.img 17/useless.bin
+25
+-1
+
+# remove file keys.txt under /secret/very_hidden/.sn34ky
+# the target inode is 257 and seven blocks get deallocated
+$ ./ext2sutils rm myfs.img /secret/very_hidden/.sn34ky/keys.txt
+257
+251 327 328 326 325 87 441
