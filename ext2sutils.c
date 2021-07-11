@@ -677,14 +677,6 @@ void delete_inode(int inode_number) {
 
 
         write_inode(inode_number,&i_node);
-
-        // inode bitmapten sil. DONE !!
-        // inode bloklarını decrement reference count yaz oraya gönder. DONE !!
-        // data block numaralarını sıfır yap. DONE !!
-        // bu inode tekrar yazmayı unutma. Herhangi bir yerde değiştirdiğini tekrar yaz file ' a. hadi kolay gelsin. DONE !!
-        // orada sıfıra ulaşırsa block bitmaplerini de sil. DONE !!
-        // grup ve globalde inode ve block counterlarını arttır. DONE !!
-        //
     }
 
 
@@ -1018,93 +1010,8 @@ int main(int argc, char *argv[])
 
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     free(block_bitmap);
     free(inode_bitmap);
     free(group_descriptor_table);
     close(fd);
 } 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
